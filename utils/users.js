@@ -291,6 +291,13 @@ const updateNickname = async (userId, status = {}) => {
   }
 };
 
+const generatePaginationLinks = (query, data) => {
+  return {
+    next: data.nextId ? getPaginationLink(query, "next", data.nextId) : "",
+    prev: data.prevId ? getPaginationLink(query, "prev", data.prevId) : "",
+  };
+};
+
 module.exports = {
   addUserToDBForTest,
   getUserId,
@@ -307,4 +314,5 @@ module.exports = {
   parseSearchQuery,
   generateOOONickname,
   updateNickname,
+  generatePaginationLinks,
 };
