@@ -47,7 +47,7 @@ const {
   usersData: abandonedUsersData,
   tasksData: abandonedTasksData,
 } = require("../fixtures/abandoned-tasks/departed-users");
-const userService = require("../../services/users");
+const dataAccess = require("../../services/dataAccessLayer");
 chai.use(chaiHttp);
 
 describe("Users", function () {
@@ -950,6 +950,54 @@ describe("Users", function () {
           return done();
         });
     });
+
+    it("Should return an empty users array when no users exist", async function () {
+      await cleanDb(); // Ensure DB is empty
+      const res = await chai.request(app).get("/users");
+
+      expect(res).to.have.status(200);
+      expect(res.body).to.be.an("object");
+      expect(res.body.users).to.be.an("array");
+      expect(res.body.users.length).to.equal(0);
+    });
+
+    it("Should return 400 for an invalid query parameter", function (done) {
+      chai
+        .request(app)
+        .get("/users?invalidParam=test")
+        .end((_err, res) => {
+          expect(res).to.have.status(400);
+          expect(res.body.message).to.equal('"invalidParam" is not allowed');
+          return done();
+        });
+    });
+
+    it("Should return users who have a member as a role", function (done) {
+      chai
+        .request(app)
+        .get("/users?roles=member")
+        .end((_err, res) => {
+          expect(res).to.have.status(200);
+          expect(res.body).to.be.an("object");
+          expect(res.body.users).to.be.an("array");
+          // Ensure sorting is in ascending order
+          expect(res.body.users.length).to.equal(1);
+          return done();
+        });
+    });
+
+    it("Should return 400 when size is a non-numeric value", function (done) {
+      chai
+        .request(app)
+        .get("/users?size=abc")
+        .end((_err, res) => {
+          expect(res).to.have.status(400);
+          expect(res.body).to.be.a("object");
+          expect(res.body.message).to.equal("size must be in range 1-100");
+          expect(res.body.error).to.equal("Bad Request");
+          return done();
+        });
+    });
   });
 
   describe("GET /users/self", function () {
@@ -1488,7 +1536,7 @@ describe("Users", function () {
     });
 
     it("should handle errors gracefully if getUsersWithIncompleteTasks fails", async function () {
-      Sinon.stub(userService, "getUsersWithIncompleteTasks").rejects(new Error(INTERNAL_SERVER_ERROR));
+      Sinon.stub(dataAccess, "retrieveUsers").rejects(new Error(INTERNAL_SERVER_ERROR));
 
       const res = await chai.request(app).get("/users?departed=true&dev=true");
 
